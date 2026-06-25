@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CutTrack — Video Editor Tracker</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;color:#1a1a1a;background:#f5f4f1}
+.app{min-height:100vh;display:flex;flex-direction:column}
+.topbar{background:#fff;border-bottom:1px solid #e8e7e3;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;flex-wrap:wrap;gap:8px}
+.topbar-left{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.logo{font-size:16px;font-weight:600;color:#1a1a1a}
+.logo span{color:#7F77DD}
+.nav{display:flex;gap:2px}
+.nav-btn{padding:6px 12px;border-radius:8px;border:none;background:transparent;font-size:13px;color:#666;cursor:pointer;font-family:inherit}
+.nav-btn.active{background:#f0eff5;color:#1a1a1a;font-weight:500}
+.nav-btn:hover:not(.active){background:#f5f4f1}
+.topbar-right{display:flex;align-items:center;gap:8px}
+.role-pill{font-size:12px;padding:4px 10px;border-radius:20px}
+.role-pill.admin{background:#EEEDFE;color:#534AB7;border:1px solid #AFA9EC}
+.role-pill.editor{background:#E1F5EE;color:#0F6E56;border:1px solid #5DCAA5}
+.switch-btn{font-size:12px;padding:5px 10px;border-radius:8px;border:1px solid #d4d3cf;background:#f5f4f1;color:#555;cursor:pointer;font-family:inherit}
+.main{flex:1;padding:20px;max-width:1100px;margin:0 auto;width:100%}
+.page{display:none}
+.page.active{display:block}
+.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px}
+.page-title{font-size:18px;font-weight:600}
+.btn{padding:7px 14px;border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit;font-weight:500;display:inline-flex;align-items:center;gap:6px;border:none;text-decoration:none}
+.btn-primary{background:#7F77DD;color:#fff}
+.btn-primary:hover{background:#534AB7}
+.btn-secondary{background:#fff;color:#1a1a1a;border:1px solid #d4d3cf}
+.btn-secondary:hover{background:#f5f4f1}
+.btn-sm{padding:4px 10px;font-size:12px}
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:20px}
+.stat-card{background:#fff;border-radius:10px;padding:14px 16px;border:1px solid #e8e7e3}
+.stat-label{font-size:12px;color:#888;margin-bottom:6px}
+.stat-value{font-size:24px;font-weight:600}
+.card{background:#fff;border-radius:12px;border:1px solid #e8e7e3;padding:20px;margin-bottom:14px}
+.table-wrap{overflow-x:auto;border-radius:12px;border:1px solid #e8e7e3;background:#fff}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:10px 14px;font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:0.05em;border-bottom:1px solid #e8e7e3;background:#fafaf8;white-space:nowrap}
+td{padding:12px 14px;border-bottom:1px solid #f0eff5;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#fafaf8}
+.status{font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;white-space:nowrap;display:inline-block}
+.s-not-started{background:#f1efe8;color:#5f5e5a}
+.s-in-progress{background:#e6f1fb;color:#185FA5}
+.s-review{background:#faeeda;color:#854F0B}
+.s-completed{background:#eaf3de;color:#3B6D11}
+.s-overdue{background:#fcebeb;color:#A32D2D}
+.progress-bar-wrap{display:flex;align-items:center;gap:8px}
+.progress-bar{height:6px;border-radius:3px;background:#e8e7e3;flex:1;min-width:60px;overflow:hidden}
+.progress-fill{height:100%;border-radius:3px;background:#7F77DD}
+.progress-label{font-size:12px;color:#888;min-width:28px;text-align:right}
+.deadline{font-size:12px}
+.deadline.urgent{color:#A32D2D;font-weight:600}
+.deadline.soon{color:#854F0B;font-weight:500}
+.deadline.ok{color:#888}
+.action-link{color:#7F77DD;cursor:pointer;font-size:12px;text-decoration:none}
+.action-link:hover{text-decoration:underline}
+.avatar{width:28px;height:28px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0}
+.av-0{background:#EEEDFE;color:#534AB7}
+.av-1{background:#E1F5EE;color:#0F6E56}
+.av-2{background:#FAEEDA;color:#854F0B}
+.av-3{background:#FAECE7;color:#993C1D}
+.av-4{background:#FBEAF0;color:#993556}
+.editor-cell{display:flex;align-items:center;gap:8px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.form-group{display:flex;flex-direction:column;gap:5px}
+.form-group.full{grid-column:1/-1}
+label{font-size:12px;color:#666;font-weight:500}
+input,select,textarea{width:100%;padding:8px 10px;border-radius:8px;border:1px solid #d4d3cf;background:#fff;color:#1a1a1a;font-family:inherit;font-size:13px}
+input:focus,select:focus,textarea:focus{outline:none;border-color:#7F77DD;box-shadow:0 0 0 3px rgba(127,119,221,0.12)}
+textarea{resize:vertical;min-height:80px}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;z-index:200;padding:20px}
+.modal{background:#fff;border-radius:14px;border:1px solid #e8e7e3;width:100%;max-width:560px;max-height:90vh;overflow-y:auto}
+.modal-header{padding:18px 20px 0;display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.modal-title{font-size:16px;font-weight:600}
+.modal-body{padding:0 20px 20px}
+.modal-footer{padding:14px 20px;border-top:1px solid #e8e7e3;display:flex;justify-content:flex-end;gap:8px}
+.close-btn{background:none;border:none;cursor:pointer;color:#888;font-size:20px;padding:2px;line-height:1}
+.close-btn:hover{color:#1a1a1a}
+.detail-row{display:flex;gap:8px;padding:9px 0;border-bottom:1px solid #f0eff5;font-size:13px}
+.detail-row:last-child{border-bottom:none}
+.detail-key{color:#888;min-width:150px;flex-shrink:0;font-size:12px;padding-top:1px;font-weight:500}
+.detail-val{color:#1a1a1a;flex:1}
+.update-card{background:#fafaf8;border-radius:8px;padding:14px;margin-bottom:10px;border:1px solid #e8e7e3}
+.update-meta{font-size:11px;color:#888;margin-bottom:6px}
+.update-text{font-size:13px;margin-bottom:6px}
+.feedback-card{background:#EEEDFE;border-radius:8px;padding:12px;margin-top:8px;border:1px solid #AFA9EC}
+.feedback-label{font-size:11px;color:#534AB7;font-weight:600;margin-bottom:4px}
+.feedback-text{font-size:13px;color:#3C3489}
+.section-label{font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:0.06em;margin:20px 0 10px}
+.empty-state{text-align:center;padding:40px 20px;color:#aaa}
+.empty-state i{font-size:36px;margin-bottom:12px;display:block;opacity:0.4}
+.blocker-badge{font-size:11px;padding:2px 8px;border-radius:4px;background:#fcebeb;color:#A32D2D;border:1px solid #F09595;display:inline-flex;align-items:center;gap:4px}
+.today-update{font-size:12px;color:#666;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.no-update{font-size:12px;color:#aaa;font-style:italic}
+.success-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1a1a1a;color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;z-index:999;opacity:0;transition:opacity 0.3s}
+.success-toast.show{opacity:1}
+@media(max-width:640px){
+  .form-grid{grid-template-columns:1fr}
+  .stats-row{grid-template-columns:1fr 1fr}
+  .topbar{gap:10px}
+  th:nth-child(2),td:nth-child(2),th:nth-child(6),td:nth-child(6){display:none}
+}
+</style>
+</head>
+<body>
+
+<div class="app" id="app">
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="logo">Cut<span>Track</span></div>
+    <div class="nav" id="nav-admin">
+      <button class="nav-btn active" onclick="showPage('dashboard',this)">Dashboard</button>
+      <button class="nav-btn" onclick="showPage('projects',this)">Projects</button>
+      <button class="nav-btn" onclick="showPage('editors',this)">Editors</button>
+    </div>
+    <div class="nav" id="nav-editor" style="display:none">
+      <button class="nav-btn active" onclick="showPage('my-projects',this)">My projects</button>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <span class="role-pill admin" id="role-pill">Admin</span>
+    <button class="switch-btn" onclick="toggleRole()" id="switch-btn">Switch to Editor view</button>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- DASHBOARD -->
+  <div class="page active" id="page-dashboard">
+    <div class="page-header">
+      <div class="page-title">Dashboard</div>
+      <button class="btn btn-primary" onclick="openAddProject()"><i class="ti ti-plus"></i> New project</button>
+    </div>
+    <div class="stats-row" id="stats-row"></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>Project</th><th>Client</th><th>Status</th><th>Editor</th><th>Progress</th><th>Today's update</th><th>Deadline</th><th></th>
+        </tr></thead>
+        <tbody id="dashboard-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- PROJECTS -->
+  <div class="page" id="page-projects">
+    <div class="page-header">
+      <div class="page-title">All projects</div>
+      <button class="btn btn-primary" onclick="openAddProject()"><i class="ti ti-plus"></i> New project</button>
+    </div>
+    <div id="projects-list"></div>
+  </div>
+
+  <!-- EDITORS -->
+  <div class="page" id="page-editors">
+    <div class="page-header">
+      <div class="page-title">Editors</div>
+    </div>
+    <div id="editors-list"></div>
+  </div>
+
+  <!-- EDITOR: MY PROJECTS -->
+  <div class="page" id="page-my-projects">
+    <div class="page-header">
+      <div class="page-title">My projects</div>
+    </div>
+    <div id="my-projects-list"></div>
+  </div>
+
+</div>
+</div>
+
+<!-- MODAL -->
+<div id="modal-container"></div>
+<!-- TOAST -->
+<div class="success-toast" id="toast"></div>
+
+<script>
+var role = 'admin';
+var currentEditorId = 0;
+
+var editors = [
+  {id:0, name:'Alex Chen',    initials:'AC', color:0},
+  {id:1, name:'Maria Santos', initials:'MS', color:1},
+  {id:2, name:'James Park',   initials:'JP', color:2},
+  {id:3, name:'Priya Nair',   initials:'PN', color:3},
+  {id:4, name:'Tom Okafor',   initials:'TO', color:4},
+];
+
+var projects = [
+  {id:0, name:'Brand Promo 2024', client:'Nike', deadline:'2026-07-02', status:'in-progress', editorId:0, progress:65,
+   rawLink:'https://drive.google.com', refLink:'https://youtube.com',
+   instructions:'Keep cuts fast, 4-second max per shot. Use brand color overlays.',
+   notes:'Client wants final at 1080p. Also deliver a 9:16 vertical version.',
+   updates:[{date:'2026-06-24', completed:'Color graded acts 1 and 2', percentage:65, blocker:'', next:'Finish act 3 and audio mix', previewLink:'https://vimeo.com', feedback:'Great pace on act 1! Tighten the ending a bit.', feedbackDate:'2026-06-24'}]},
+
+  {id:1, name:'Wedding Highlight', client:'Johnson Family', deadline:'2026-07-10', status:'in-progress', editorId:1, progress:40,
+   rawLink:'https://drive.google.com', refLink:'',
+   instructions:'Emotional tone, slow cuts. Use the ceremony audio as backbone.',
+   notes:'Deliver 4-minute and 90-second versions.',
+   updates:[{date:'2026-06-24', completed:'Rough cut of ceremony section done', percentage:40, blocker:'Missing footage from reception', next:'Work on reception once footage arrives', previewLink:'', feedback:'', feedbackDate:''}]},
+
+  {id:2, name:'Product Launch Video', client:'TechCorp', deadline:'2026-06-28', status:'review', editorId:2, progress:90,
+   rawLink:'https://dropbox.com', refLink:'https://youtube.com',
+   instructions:'Clean and minimal. White backgrounds, text overlays on all features.',
+   notes:'CEO wants to personally approve before delivery.',
+   updates:[{date:'2026-06-24', completed:'Final version ready for review', percentage:90, blocker:'', next:'Apply feedback from manager', previewLink:'https://vimeo.com', feedback:'', feedbackDate:''}]},
+
+  {id:3, name:'Social Media Pack', client:'BeautyBrand', deadline:'2026-07-15', status:'not-started', editorId:3, progress:0,
+   rawLink:'', refLink:'',
+   instructions:'5x Reels, 3x YouTube Shorts. Trendy cuts with text hooks.',
+   notes:'Get started this week.',
+   updates:[]},
+
+  {id:4, name:'Corporate Testimonials', client:'LawFirm Inc', deadline:'2026-07-05', status:'in-progress', editorId:4, progress:30,
+   rawLink:'https://drive.google.com', refLink:'',
+   instructions:'Professional look. Lower thirds for names. Minimal music.',
+   notes:'Strict NDA — do not share previews externally.',
+   updates:[{date:'2026-06-23', completed:'Synced all 6 interview clips', percentage:30, blocker:'Audio quality issues on clip 3', next:'Request re-record or fix in Audition', previewLink:'', feedback:'Check if noise reduction helps first before requesting a re-record.', feedbackDate:'2026-06-23'}]},
+
+  {id:5, name:'Documentary Trailer', client:'IndieFilms', deadline:'2026-08-01', status:'not-started', editorId:0, progress:0,
+   rawLink:'', refLink:'',
+   instructions:'2-minute trailer, punchy cuts, tension build. No spoilers.',
+   notes:'',
+   updates:[]},
+];
+
+var statusLabels = {'not-started':'Not started','in-progress':'In progress','review':'Review','completed':'Completed'};
+var statusClass  = {'not-started':'s-not-started','in-progress':'s-in-progress','review':'s-review','completed':'s-completed'};
+
+function today(){ return new Date().toISOString().slice(0,10); }
+
+function daysLeft(d){
+  return Math.ceil((new Date(d) - new Date()) / (1000*60*60*24));
+}
+
+function deadlineHtml(d){
+  var n = daysLeft(d);
+  var label = n < 0 ? 'Overdue '+Math.abs(n)+'d' : n === 0 ? 'Due today' : 'Due in '+n+'d';
+  var cls   = n < 0 ? 'urgent' : n <= 3 ? 'soon' : 'ok';
+  return '<span class="deadline '+cls+'">'+label+'</span>';
+}
+
+function statusBadge(s){
+  return '<span class="status '+statusClass[s]+'">'+statusLabels[s]+'</span>';
+}
+
+function editorHtml(id){
+  var e = editors[id];
+  return '<div class="editor-cell"><div class="avatar av-'+e.color+'">'+e.initials+'</div><span>'+e.name+'</span></div>';
+}
+
+function progressHtml(p){
+  return '<div class="progress-bar-wrap"><div class="progress-bar"><div class="progress-fill" style="width:'+p+'%"></div></div><span class="progress-label">'+p+'%</span></div>';
+}
+
+/* ── DASHBOARD ── */
+function renderStats(){
+  var total   = projects.length;
+  var inprog  = projects.filter(p=>p.status==='in-progress').length;
+  var review  = projects.filter(p=>p.status==='review').length;
+  var done    = projects.filter(p=>p.status==='completed').length;
+  var overdue = projects.filter(p=>daysLeft(p.deadline)<0 && p.status!=='completed').length;
+  document.getElementById('stats-row').innerHTML =
+    stat('Total projects', total, '') +
+    stat('In progress',    inprog,  '#185FA5') +
+    stat('In review',      review,  '#854F0B') +
+    stat('Completed',      done,    '#3B6D11') +
+    stat('Overdue',        overdue, '#A32D2D');
+}
+function stat(label,val,color){
+  return '<div class="stat-card"><div class="stat-label">'+label+'</div><div class="stat-value"'+(color?' style="color:'+color+'"':'')+'">'+val+'</div></div>';
+}
+
+function renderDashboard(){
+  renderStats();
+  var rows = projects.map(p => {
+    var last = p.updates.length ? p.updates[p.updates.length-1] : null;
+    var todayUpd = last
+      ? '<span class="today-update" title="'+last.completed+'">'+last.completed+'</span>'
+      : '<span class="no-update">No update yet</span>';
+    var dl = daysLeft(p.deadline);
+    var statusToShow = (dl < 0 && p.status !== 'completed')
+      ? '<span class="status s-overdue">Overdue</span>'
+      : statusBadge(p.status);
+    return '<tr>'+
+      '<td><strong style="font-weight:500">'+p.name+'</strong></td>'+
+      '<td style="color:#888">'+p.client+'</td>'+
+      '<td>'+statusToShow+'</td>'+
+      '<td>'+editorHtml(p.editorId)+'</td>'+
+      '<td>'+progressHtml(p.progress)+'</td>'+
+      '<td>'+todayUpd+'</td>'+
+      '<td>'+deadlineHtml(p.deadline)+'</td>'+
+      '<td><span class="action-link" onclick="openProjectDetail('+p.id+')">Details</span></td>'+
+      '</tr>';
+  }).join('');
+  document.getElementById('dashboard-body').innerHTML = rows;
+}
+
+/* ── PROJECTS PAGE ── */
+function renderProjects(){
+  var html = projects.map(p => {
+    var last = p.updates.length ? p.updates[p.updates.length-1] : null;
+    return '<div class="card">'+
+      '<div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">'+
+        '<div>'+
+          '<div style="font-size:15px;font-weight:600;margin-bottom:3px">'+p.name+'</div>'+
+          '<div style="font-size:12px;color:#888">'+p.client+'</div>'+
+        '</div>'+
+        '<div style="display:flex;gap:8px;align-items:center">'+
+          statusBadge(p.status)+
+          '<button class="btn btn-sm btn-secondary" onclick="openProjectDetail('+p.id+')">View details</button>'+
+          (role==='admin'?'<button class="btn btn-sm btn-secondary" onclick="openEditProject('+p.id+')" title="Edit"><i class="ti ti-edit"></i></button>':'')+
+        '</div>'+
+      '</div>'+
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px">'+
+        '<div><span style="font-size:11px;color:#888;font-weight:500">Editor</span><div style="margin-top:4px">'+editorHtml(p.editorId)+'</div></div>'+
+        '<div><span style="font-size:11px;color:#888;font-weight:500">Progress</span><div style="margin-top:8px">'+progressHtml(p.progress)+'</div></div>'+
+        '<div><span style="font-size:11px;color:#888;font-weight:500">Deadline</span><div style="margin-top:5px">'+deadlineHtml(p.deadline)+'</div></div>'+
+      '</div>'+
+      (last?
+        '<div style="margin-top:12px;padding-top:12px;border-top:1px solid #f0eff5">'+
+          '<span style="font-size:11px;color:#888">Latest update · '+last.date+'</span>'+
+          '<div style="font-size:13px;margin-top:4px">'+last.completed+'</div>'+
+          (last.blocker?'<div style="margin-top:6px"><span class="blocker-badge"><i class="ti ti-alert-triangle"></i> '+last.blocker+'</span></div>':'')+
+        '</div>':'')+
+      '</div>';
+  }).join('');
+  document.getElementById('projects-list').innerHTML = html;
+}
+
+/* ── EDITORS PAGE ── */
+function renderEditors(){
+  var html = editors.map(e => {
+    var myP    = projects.filter(p => p.editorId === e.id);
+    var active = myP.filter(p => p.status !== 'completed');
+    return '<div class="card">'+
+      '<div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">'+
+        '<div class="avatar av-'+e.color+'" style="width:42px;height:42px;font-size:14px">'+e.initials+'</div>'+
+        '<div>'+
+          '<div style="font-weight:600;font-size:15px">'+e.name+'</div>'+
+          '<div style="font-size:12px;color:#888">'+active.length+' active project'+(active.length!==1?'s':'')+'</div>'+
+        '</div>'+
+      '</div>'+
+      (active.length ?
+        '<div class="table-wrap"><table>'+
+          '<thead><tr><th>Project</th><th>Status</th><th>Progress</th><th>Deadline</th><th>Latest update</th></tr></thead>'+
+          '<tbody>'+active.map(p=>{
+            var last = p.updates.length ? p.updates[p.updates.length-1] : null;
+            return '<tr>'+
+              '<td>'+p.name+'</td>'+
+              '<td>'+statusBadge(p.status)+'</td>'+
+              '<td>'+progressHtml(p.progress)+'</td>'+
+              '<td>'+deadlineHtml(p.deadline)+'</td>'+
+              '<td>'+(last?'<span style="font-size:12px">'+last.completed+'</span>':'<span class="no-update">None yet</span>')+'</td>'+
+              '</tr>';
+          }).join('')+'</tbody>'+
+        '</table></div>'
+        : '<div style="font-size:13px;color:#aaa;font-style:italic">No active projects.</div>')+
+      '</div>';
+  }).join('');
+  document.getElementById('editors-list').innerHTML = html;
+}
+
+/* ── EDITOR: MY PROJECTS ── */
+function renderMyProjects(){
+  var myP = projects.filter(p => p.editorId === currentEditorId);
+  if(!myP.length){
+    document.getElementById('my-projects-list').innerHTML =
+      '<div class="empty-state"><i class="ti ti-video-off"></i>No projects assigned yet.</div>';
+    return;
+  }
+  var html = myP.map(p => {
+    var last = p.updates.length ? p.updates[p.updates.length-1] : null;
+    return '<div class="card">'+
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;margin-bottom:14px">'+
+        '<div>'+
+          '<div style="font-size:15px;font-weight:600;margin-bottom:3px">'+p.name+'</div>'+
+          '<div style="font-size:12px;color:#888">'+p.client+'</div>'+
+        '</div>'+
+        '<div style="display:flex;gap:8px;align-items:center">'+statusBadge(p.status)+deadlineHtml(p.deadline)+'</div>'+
+      '</div>'+
+      progressHtml(p.progress)+
+      '<div style="margin:14px 0 10px;font-size:13px">'+
+        '<div style="font-size:11px;color:#888;font-weight:500;margin-bottom:4px">Editing instructions</div>'+
+        p.instructions+
+      '</div>'+
+      (p.notes?
+        '<div style="background:#fafaf8;border:1px solid #e8e7e3;border-radius:8px;padding:10px;margin-bottom:12px;font-size:13px">'+
+          '<div style="font-size:11px;color:#888;font-weight:500;margin-bottom:4px">Note from manager</div>'+p.notes+
+        '</div>':'')+
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">'+
+        (p.rawLink?'<a class="btn btn-sm btn-secondary" href="'+p.rawLink+'" target="_blank"><i class="ti ti-download"></i> Raw footage</a>':'')+
+        (p.refLink?'<a class="btn btn-sm btn-secondary" href="'+p.refLink+'" target="_blank"><i class="ti ti-external-link"></i> Reference video</a>':'')+
+      '</div>'+
+      '<div style="padding-top:16px;border-top:1px solid #e8e7e3">'+
+        '<div style="font-size:14px;font-weight:600;margin-bottom:14px">Post today\'s update</div>'+
+        '<div class="form-grid">'+
+          '<div class="form-group"><label>What I completed today</label><textarea id="uc-'+p.id+'" placeholder="Describe what you finished..."></textarea></div>'+
+          '<div class="form-group"><label>What I\'ll do next</label><textarea id="un-'+p.id+'" placeholder="Your next steps..."></textarea></div>'+
+          '<div class="form-group"><label>Blockers / problems</label><input type="text" id="ub-'+p.id+'" placeholder="Any issues? Leave blank if none."></div>'+
+          '<div class="form-group"><label>Preview link (Vimeo, Drive, etc.)</label><input type="url" id="up-'+p.id+'" placeholder="https://..."></div>'+
+          '<div class="form-group"><label>Progress: <strong id="upv-'+p.id+'">'+p.progress+'</strong>%</label>'+
+            '<input type="range" min="0" max="100" step="5" value="'+p.progress+'" oninput="document.getElementById(\'upv-'+p.id+'\').textContent=this.value">'+
+          '</div>'+
+          '<div class="form-group"><label>Mark status</label>'+
+            '<select id="us-'+p.id+'">'+
+              Object.keys(statusLabels).map(k=>'<option value="'+k+'"'+(p.status===k?' selected':'')+'>'+statusLabels[k]+'</option>').join('')+
+            '</select>'+
+          '</div>'+
+        '</div>'+
+        '<button class="btn btn-primary" style="margin-top:14px" onclick="submitUpdate('+p.id+')">Submit update</button>'+
+      '</div>'+
+      (last ?
+        '<div style="margin-top:18px;padding-top:14px;border-top:1px solid #e8e7e3">'+
+          '<div class="section-label">Previous updates</div>'+
+          p.updates.slice().reverse().map(u=>
+            '<div class="update-card">'+
+              '<div class="update-meta">'+u.date+(u.previewLink?' &nbsp;·&nbsp; <a href="'+u.previewLink+'" target="_blank" class="action-link">Preview link</a>':'')+'</div>'+
+              '<div class="update-text"><strong style="font-weight:500">Done:</strong> '+u.completed+'</div>'+
+              (u.blocker?'<div style="margin:5px 0"><span class="blocker-badge"><i class="ti ti-alert-triangle"></i> '+u.blocker+'</span></div>':'')+
+              '<div style="font-size:12px;color:#888">Next: '+u.next+'</div>'+
+              (u.feedback?'<div class="feedback-card"><div class="feedback-label">Feedback from manager</div><div class="feedback-text">'+u.feedback+'</div></div>':'')+
+            '</div>'
+          ).join('')+
+        '</div>' : '')+
+      '</div>';
+  }).join('');
+  document.getElementById('my-projects-list').innerHTML = html;
+}
+
+/* ── SUBMIT UPDATE ── */
+function submitUpdate(pid){
+  var p         = projects.find(x => x.id === pid);
+  var completed = document.getElementById('uc-'+pid).value.trim();
+  if(!completed){ showToast('Please describe what you completed today.'); return; }
+  var pct = parseInt(document.getElementById('upv-'+pid).textContent);
+  p.updates.push({
+    date:        today(),
+    completed:   completed,
+    percentage:  pct,
+    blocker:     document.getElementById('ub-'+pid).value.trim(),
+    next:        document.getElementById('un-'+pid).value.trim(),
+    previewLink: document.getElementById('up-'+pid).value.trim(),
+    feedback:'', feedbackDate:''
+  });
+  p.progress = pct;
+  p.status   = document.getElementById('us-'+pid).value;
+  renderAll();
+  showToast('Update posted!');
+}
+
+/* ── PROJECT DETAIL MODAL ── */
+function openProjectDetail(pid){
+  var p    = projects.find(x => x.id === pid);
+  var last = p.updates.length ? p.updates[p.updates.length-1] : null;
+
+  var feedbackSection = '';
+  if(role === 'admin' && last && !last.feedback){
+    feedbackSection =
+      '<div style="margin-top:12px">'+
+        '<div style="font-size:12px;color:#666;margin-bottom:6px;font-weight:500">Leave feedback on latest update</div>'+
+        '<textarea id="fb-text" style="width:100%;margin-bottom:8px" placeholder="Write your feedback..."></textarea>'+
+        '<button class="btn btn-primary btn-sm" onclick="submitFeedback('+pid+')">Send feedback</button>'+
+      '</div>';
+  }
+
+  var html =
+    '<div class="modal-header">'+
+      '<div class="modal-title">'+p.name+'</div>'+
+      '<button class="close-btn" onclick="closeModal()"><i class="ti ti-x"></i></button>'+
+    '</div>'+
+    '<div class="modal-body">'+
+      row('Client',       p.client)+
+      row('Status',       statusBadge(p.status))+
+      row('Editor',       editorHtml(p.editorId))+
+      row('Deadline',     deadlineHtml(p.deadline))+
+      row('Progress',     progressHtml(p.progress))+
+      (p.rawLink ? row('Raw footage',  '<a href="'+p.rawLink+'" target="_blank" class="action-link">Open link <i class="ti ti-external-link"></i></a>') : '')+
+      (p.refLink ? row('Reference video','<a href="'+p.refLink+'" target="_blank" class="action-link">Open link <i class="ti ti-external-link"></i></a>') : '')+
+      row('Instructions', p.instructions)+
+      (p.notes ? row('Notes for editor', p.notes) : '')+
+
+      (p.updates.length ?
+        '<div class="section-label">Progress updates</div>'+
+        p.updates.slice().reverse().map(u=>
+          '<div class="update-card">'+
+            '<div class="update-meta">'+u.date+(u.previewLink?' &nbsp;·&nbsp; <a href="'+u.previewLink+'" target="_blank" class="action-link">Preview</a>':'')+'</div>'+
+            '<div class="update-text"><strong style="font-weight:500">Done:</strong> '+u.completed+'</div>'+
+            (u.blocker?'<div style="margin:6px 0"><span class="blocker-badge"><i class="ti ti-alert-triangle"></i> '+u.blocker+'</span></div>':'')+
+            '<div style="font-size:12px;color:#888">Next: '+u.next+'</div>'+
+            (u.feedback?'<div class="feedback-card"><div class="feedback-label">Your feedback · '+u.feedbackDate+'</div><div class="feedback-text">'+u.feedback+'</div></div>':'')+
+          '</div>'
+        ).join('')+feedbackSection
+        : '<div style="font-size:13px;color:#aaa;padding:12px 0;font-style:italic">No updates yet.</div>')+
+
+      (role === 'admin' ?
+        '<div style="margin-top:16px;padding-top:14px;border-top:1px solid #e8e7e3">'+
+          '<div style="font-size:12px;font-weight:500;margin-bottom:8px">Quick actions</div>'+
+          '<div style="display:flex;gap:8px;flex-wrap:wrap">'+
+            '<button class="btn btn-sm" style="background:#eaf3de;color:#3B6D11;border:none" onclick="markCompleted('+p.id+')"><i class="ti ti-check"></i> Mark completed</button>'+
+            '<button class="btn btn-sm btn-secondary" onclick="closeModal();openEditProject('+p.id+')"><i class="ti ti-edit"></i> Edit project</button>'+
+          '</div>'+
+        '</div>' : '')+
+    '</div>';
+
+  showModal(html);
+}
+
+function row(key, val){
+  return '<div class="detail-row"><span class="detail-key">'+key+'</span><span class="detail-val">'+val+'</span></div>';
+}
+
+function submitFeedback(pid){
+  var p    = projects.find(x => x.id === pid);
+  var text = document.getElementById('fb-text').value.trim();
+  if(!text){ showToast('Please write your feedback first.'); return; }
+  var last = p.updates[p.updates.length-1];
+  last.feedback     = text;
+  last.feedbackDate = today();
+  closeModal();
+  openProjectDetail(pid);
+  renderMyProjects();
+  showToast('Feedback sent!');
+}
+
+function markCompleted(pid){
+  var p    = projects.find(x => x.id === pid);
+  p.status   = 'completed';
+  p.progress = 100;
+  closeModal();
+  renderAll();
+  showToast('Project marked as completed!');
+}
+
+/* ── ADD PROJECT MODAL ── */
+function openAddProject(){
+  var editorOpts = editors.map(e => '<option value="'+e.id+'">'+e.name+'</option>').join('');
+  var html =
+    '<div class="modal-header">'+
+      '<div class="modal-title">New project</div>'+
+      '<button class="close-btn" onclick="closeModal()"><i class="ti ti-x"></i></button>'+
+    '</div>'+
+    '<div class="modal-body">'+
+      '<div class="form-grid">'+
+        '<div class="form-group full"><label>Project name</label><input id="np-name" placeholder="e.g. Brand Promo"></div>'+
+        '<div class="form-group"><label>Client name</label><input id="np-client" placeholder="Client or company name"></div>'+
+        '<div class="form-group"><label>Deadline</label><input type="date" id="np-deadline"></div>'+
+        '<div class="form-group"><label>Assign editor</label><select id="np-editor">'+editorOpts+'</select></div>'+
+        '<div class="form-group full"><label>Raw footage link</label><input id="np-raw" placeholder="Google Drive, Dropbox..."></div>'+
+        '<div class="form-group full"><label>Reference video link</label><input id="np-ref" placeholder="YouTube, Vimeo..."></div>'+
+        '<div class="form-group full"><label>Editing instructions</label><textarea id="np-instr" placeholder="Describe the style, tone, pace, cuts..."></textarea></div>'+
+        '<div class="form-group full"><label>Notes for editor</label><textarea id="np-notes" placeholder="Delivery specs, format, special requests..."></textarea></div>'+
+      '</div>'+
+    '</div>'+
+    '<div class="modal-footer">'+
+      '<button class="btn btn-secondary" onclick="closeModal()">Cancel</button>'+
+      '<button class="btn btn-primary" onclick="addProject()">Add project</button>'+
+    '</div>';
+  showModal(html);
+}
+
+function addProject(){
+  var name     = document.getElementById('np-name').value.trim();
+  var client   = document.getElementById('np-client').value.trim();
+  var deadline = document.getElementById('np-deadline').value;
+  if(!name || !client || !deadline){ showToast('Please fill in name, client, and deadline.'); return; }
+  projects.push({
+    id:           projects.length,
+    name:         name,
+    client:       client,
+    deadline:     deadline,
+    status:       'not-started',
+    editorId:     parseInt(document.getElementById('np-editor').value),
+    progress:     0,
+    rawLink:      document.getElementById('np-raw').value.trim(),
+    refLink:      document.getElementById('np-ref').value.trim(),
+    instructions: document.getElementById('np-instr').value.trim(),
+    notes:        document.getElementById('np-notes').value.trim(),
+    updates:      []
+  });
+  closeModal();
+  renderAll();
+  showToast('Project added!');
+}
+
+/* ── EDIT PROJECT MODAL ── */
+function openEditProject(pid){
+  var p = projects.find(x => x.id === pid);
+  var editorOpts  = editors.map(e => '<option value="'+e.id+'"'+(p.editorId===e.id?' selected':'')+'>'+e.name+'</option>').join('');
+  var statusOpts  = Object.keys(statusLabels).map(k => '<option value="'+k+'"'+(p.status===k?' selected':'')+'>'+statusLabels[k]+'</option>').join('');
+  var html =
+    '<div class="modal-header">'+
+      '<div class="modal-title">Edit project</div>'+
+      '<button class="close-btn" onclick="closeModal()"><i class="ti ti-x"></i></button>'+
+    '</div>'+
+    '<div class="modal-body">'+
+      '<div class="form-grid">'+
+        '<div class="form-group full"><label>Project name</label><input id="ep-name" value="'+p.name+'"></div>'+
+        '<div class="form-group"><label>Client name</label><input id="ep-client" value="'+p.client+'"></div>'+
+        '<div class="form-group"><label>Deadline</label><input type="date" id="ep-deadline" value="'+p.deadline+'"></div>'+
+        '<div class="form-group"><label>Assign editor</label><select id="ep-editor">'+editorOpts+'</select></div>'+
+        '<div class="form-group"><label>Status</label><select id="ep-status">'+statusOpts+'</select></div>'+
+        '<div class="form-group full"><label>Raw footage link</label><input id="ep-raw" value="'+escHtml(p.rawLink)+'"></div>'+
+        '<div class="form-group full"><label>Reference video link</label><input id="ep-ref" value="'+escHtml(p.refLink)+'"></div>'+
+        '<div class="form-group full"><label>Editing instructions</label><textarea id="ep-instr">'+escHtml(p.instructions)+'</textarea></div>'+
+        '<div class="form-group full"><label>Notes for editor</label><textarea id="ep-notes">'+escHtml(p.notes)+'</textarea></div>'+
+      '</div>'+
+    '</div>'+
+    '<div class="modal-footer">'+
+      '<button class="btn btn-secondary" onclick="closeModal()">Cancel</button>'+
+      '<button class="btn btn-primary" onclick="saveEdit('+pid+')">Save changes</button>'+
+    '</div>';
+  showModal(html);
+}
+
+function saveEdit(pid){
+  var p = projects.find(x => x.id === pid);
+  p.name         = document.getElementById('ep-name').value.trim();
+  p.client       = document.getElementById('ep-client').value.trim();
+  p.deadline     = document.getElementById('ep-deadline').value;
+  p.editorId     = parseInt(document.getElementById('ep-editor').value);
+  p.status       = document.getElementById('ep-status').value;
+  p.rawLink      = document.getElementById('ep-raw').value.trim();
+  p.refLink      = document.getElementById('ep-ref').value.trim();
+  p.instructions = document.getElementById('ep-instr').value.trim();
+  p.notes        = document.getElementById('ep-notes').value.trim();
+  closeModal();
+  renderAll();
+  showToast('Changes saved!');
+}
+
+/* ── HELPERS ── */
+function escHtml(s){ return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function showModal(html){
+  document.getElementById('modal-container').innerHTML =
+    '<div class="modal-overlay" onclick="closeModalOutside(event)"><div class="modal">'+html+'</div></div>';
+}
+function closeModal(){ document.getElementById('modal-container').innerHTML = ''; }
+function closeModalOutside(e){ if(e.target === e.currentTarget) closeModal(); }
+
+function showToast(msg){
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2400);
+}
+
+function showPage(name, btn){
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  if(btn){
+    var nav = btn.closest('.nav');
+    if(nav) nav.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+}
+
+function toggleRole(){
+  if(role === 'admin'){
+    role = 'editor'; currentEditorId = 0;
+    document.getElementById('role-pill').className = 'role-pill editor';
+    document.getElementById('role-pill').textContent = 'Editor: Alex Chen';
+    document.getElementById('switch-btn').textContent = 'Switch to Admin view';
+    document.getElementById('nav-admin').style.display = 'none';
+    document.getElementById('nav-editor').style.display = 'flex';
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById('page-my-projects').classList.add('active');
+    document.querySelectorAll('#nav-editor .nav-btn').forEach(b => b.classList.add('active'));
+  } else {
+    role = 'admin';
+    document.getElementById('role-pill').className = 'role-pill admin';
+    document.getElementById('role-pill').textContent = 'Admin';
+    document.getElementById('switch-btn').textContent = 'Switch to Editor view';
+    document.getElementById('nav-editor').style.display = 'none';
+    document.getElementById('nav-admin').style.display = 'flex';
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById('page-dashboard').classList.add('active');
+    document.querySelector('#nav-admin .nav-btn').classList.add('active');
+  }
+  renderAll();
+}
+
+function renderAll(){
+  renderDashboard();
+  renderProjects();
+  renderEditors();
+  renderMyProjects();
+}
+
+renderAll();
+</script>
+</body>
+</html>
