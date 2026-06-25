@@ -100,6 +100,11 @@ textarea{resize:vertical;min-height:80px}
 .no-update{font-size:12px;color:#aaa;font-style:italic}
 .success-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1a1a1a;color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;z-index:999;opacity:0;transition:opacity 0.3s}
 .success-toast.show{opacity:1}
+.btn-danger{background:#fcebeb;color:#A32D2D;border:1px solid #F09595}
+.btn-danger:hover{background:#F7C1C1}
+.editor-card-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px}
+.editor-info{display:flex;align-items:center;gap:12px}
+.editor-actions{display:flex;gap:6px}
 @media(max-width:640px){
   .form-grid{grid-template-columns:1fr}
   .stats-row{grid-template-columns:1fr 1fr}
@@ -161,6 +166,7 @@ textarea{resize:vertical;min-height:80px}
   <div class="page" id="page-editors">
     <div class="page-header">
       <div class="page-title">Editors</div>
+      <button class="btn btn-primary" onclick="openAddEditor()"><i class="ti ti-plus"></i> Add editor</button>
     </div>
     <div id="editors-list"></div>
   </div>
@@ -186,12 +192,13 @@ var role = 'admin';
 var currentEditorId = 0;
 
 var editors = [
-  {id:0, name:'Alex Chen',    initials:'AC', color:0},
-  {id:1, name:'Maria Santos', initials:'MS', color:1},
-  {id:2, name:'James Park',   initials:'JP', color:2},
-  {id:3, name:'Priya Nair',   initials:'PN', color:3},
-  {id:4, name:'Tom Okafor',   initials:'TO', color:4},
+  {id:0, name:'Alex Chen',    email:'alex@studio.com',   initials:'AC', color:0, role:'Senior Editor'},
+  {id:1, name:'Maria Santos', email:'maria@studio.com',  initials:'MS', color:1, role:'Colorist'},
+  {id:2, name:'James Park',   email:'james@studio.com',  initials:'JP', color:2, role:'Motion Graphics'},
+  {id:3, name:'Priya Nair',   email:'priya@studio.com',  initials:'PN', color:3, role:'Editor'},
+  {id:4, name:'Tom Okafor',   email:'tom@studio.com',    initials:'TO', color:4, role:'Editor'},
 ];
+var nextEditorId = 5;
 
 var projects = [
   {id:0, name:'Brand Promo 2024', client:'Nike', deadline:'2026-07-02', status:'in-progress', editorId:0, progress:65,
@@ -252,8 +259,13 @@ function statusBadge(s){
 }
 
 function editorHtml(id){
-  var e = editors[id];
+  var e = editors.find(x => x.id === id);
+  if(!e) return '<span style="color:#aaa;font-size:12px">Unassigned</span>';
   return '<div class="editor-cell"><div class="avatar av-'+e.color+'">'+e.initials+'</div><span>'+e.name+'</span></div>';
+}
+
+function getInitials(name){
+  return name.trim().split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
 }
 
 function progressHtml(p){
@@ -337,15 +349,29 @@ function renderProjects(){
 
 /* ── EDITORS PAGE ── */
 function renderEditors(){
+  if(!editors.length){
+    document.getElementById('editors-list').innerHTML =
+      '<div class="empty-state"><i class="ti ti-users"></i>No editors yet. Add your first editor.</div>';
+    return;
+  }
   var html = editors.map(e => {
     var myP    = projects.filter(p => p.editorId === e.id);
     var active = myP.filter(p => p.status !== 'completed');
+    var done   = myP.filter(p => p.status === 'completed').length;
     return '<div class="card">'+
-      '<div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">'+
-        '<div class="avatar av-'+e.color+'" style="width:42px;height:42px;font-size:14px">'+e.initials+'</div>'+
-        '<div>'+
-          '<div style="font-weight:600;font-size:15px">'+e.name+'</div>'+
-          '<div style="font-size:12px;color:#888">'+active.length+' active project'+(active.length!==1?'s':'')+'</div>'+
+      '<div class="editor-card-header">'+
+        '<div class="editor-info">'+
+          '<div class="avatar av-'+e.color+'" style="width:44px;height:44px;font-size:15px">'+e.initials+'</div>'+
+          '<div>'+
+            '<div style="font-weight:600;font-size:15px">'+escHtml(e.name)+'</div>'+
+            '<div style="font-size:12px;color:#888;margin-top:2px">'+escHtml(e.role||'Editor')+'</div>'+
+            '<div style="font-size:12px;color:#7F77DD;margin-top:1px"><i class="ti ti-mail" style="font-size:11px"></i> '+escHtml(e.email)+'</div>'+
+          '</div>'+
+        '</div>'+
+        '<div class="editor-actions">'+
+          '<span style="font-size:12px;color:#888;margin-right:6px">'+active.length+' active · '+done+' done</span>'+
+          '<button class="btn btn-sm btn-secondary" onclick="openEditEditor('+e.id+')" title="Edit editor"><i class="ti ti-edit"></i> Edit</button>'+
+          '<button class="btn btn-sm btn-danger" onclick="confirmDeleteEditor('+e.id+')" title="Delete editor"><i class="ti ti-trash"></i></button>'+
         '</div>'+
       '</div>'+
       (active.length ?
@@ -354,11 +380,11 @@ function renderEditors(){
           '<tbody>'+active.map(p=>{
             var last = p.updates.length ? p.updates[p.updates.length-1] : null;
             return '<tr>'+
-              '<td>'+p.name+'</td>'+
+              '<td>'+escHtml(p.name)+'</td>'+
               '<td>'+statusBadge(p.status)+'</td>'+
               '<td>'+progressHtml(p.progress)+'</td>'+
               '<td>'+deadlineHtml(p.deadline)+'</td>'+
-              '<td>'+(last?'<span style="font-size:12px">'+last.completed+'</span>':'<span class="no-update">None yet</span>')+'</td>'+
+              '<td>'+(last?'<span style="font-size:12px">'+escHtml(last.completed)+'</span>':'<span class="no-update">None yet</span>')+'</td>'+
               '</tr>';
           }).join('')+'</tbody>'+
         '</table></div>'
@@ -366,6 +392,121 @@ function renderEditors(){
       '</div>';
   }).join('');
   document.getElementById('editors-list').innerHTML = html;
+}
+
+/* ── ADD EDITOR ── */
+function openAddEditor(){
+  var colorOpts = ['Purple','Teal','Amber','Coral','Pink'].map((c,i)=>'<option value="'+i+'">'+c+'</option>').join('');
+  var html =
+    '<div class="modal-header">'+
+      '<div class="modal-title">Add editor</div>'+
+      '<button class="close-btn" onclick="closeModal()"><i class="ti ti-x"></i></button>'+
+    '</div>'+
+    '<div class="modal-body">'+
+      '<div class="form-grid">'+
+        '<div class="form-group full"><label>Full name</label><input id="ae-name" placeholder="e.g. Sarah Lee"></div>'+
+        '<div class="form-group full"><label>Email address</label><input type="email" id="ae-email" placeholder="editor@email.com"></div>'+
+        '<div class="form-group"><label>Role / speciality</label><input id="ae-role" placeholder="e.g. Senior Editor, Colorist"></div>'+
+        '<div class="form-group"><label>Avatar color</label><select id="ae-color">'+colorOpts+'</select></div>'+
+      '</div>'+
+      '<div style="margin-top:14px;padding:12px;background:#fafaf8;border-radius:8px;border:1px solid #e8e7e3">'+
+        '<div style="font-size:11px;color:#888;font-weight:500;margin-bottom:4px">Account info</div>'+
+        '<div style="font-size:12px;color:#666">The editor will log in using their email address. Share the app link and their email with them so they can access their projects.</div>'+
+      '</div>'+
+    '</div>'+
+    '<div class="modal-footer">'+
+      '<button class="btn btn-secondary" onclick="closeModal()">Cancel</button>'+
+      '<button class="btn btn-primary" onclick="addEditor()">Add editor</button>'+
+    '</div>';
+  showModal(html);
+}
+
+function addEditor(){
+  var name  = document.getElementById('ae-name').value.trim();
+  var email = document.getElementById('ae-email').value.trim();
+  var role  = document.getElementById('ae-role').value.trim();
+  var color = parseInt(document.getElementById('ae-color').value);
+  if(!name || !email){ showToast('Please fill in name and email.'); return; }
+  editors.push({
+    id:       nextEditorId++,
+    name:     name,
+    email:    email,
+    role:     role || 'Editor',
+    initials: getInitials(name),
+    color:    color
+  });
+  closeModal();
+  renderAll();
+  showToast('Editor added!');
+}
+
+/* ── EDIT EDITOR ── */
+function openEditEditor(eid){
+  var e = editors.find(x => x.id === eid);
+  var colorOpts = ['Purple','Teal','Amber','Coral','Pink'].map((c,i)=>'<option value="'+i+'"'+(e.color===i?' selected':'')+'>'+c+'</option>').join('');
+  var html =
+    '<div class="modal-header">'+
+      '<div class="modal-title">Edit editor</div>'+
+      '<button class="close-btn" onclick="closeModal()"><i class="ti ti-x"></i></button>'+
+    '</div>'+
+    '<div class="modal-body">'+
+      '<div class="form-grid">'+
+        '<div class="form-group full"><label>Full name</label><input id="ee-name" value="'+escHtml(e.name)+'"></div>'+
+        '<div class="form-group full"><label>Email address</label><input type="email" id="ee-email" value="'+escHtml(e.email)+'"></div>'+
+        '<div class="form-group"><label>Role / speciality</label><input id="ee-role" value="'+escHtml(e.role||'')+'"></div>'+
+        '<div class="form-group"><label>Avatar color</label><select id="ee-color">'+colorOpts+'</select></div>'+
+      '</div>'+
+    '</div>'+
+    '<div class="modal-footer">'+
+      '<button class="btn btn-secondary" onclick="closeModal()">Cancel</button>'+
+      '<button class="btn btn-primary" onclick="saveEditor('+eid+')">Save changes</button>'+
+    '</div>';
+  showModal(html);
+}
+
+function saveEditor(eid){
+  var e = editors.find(x => x.id === eid);
+  var name = document.getElementById('ee-name').value.trim();
+  if(!name){ showToast('Name cannot be empty.'); return; }
+  e.name     = name;
+  e.email    = document.getElementById('ee-email').value.trim();
+  e.role     = document.getElementById('ee-role').value.trim() || 'Editor';
+  e.color    = parseInt(document.getElementById('ee-color').value);
+  e.initials = getInitials(name);
+  closeModal();
+  renderAll();
+  showToast('Editor updated!');
+}
+
+/* ── DELETE EDITOR ── */
+function confirmDeleteEditor(eid){
+  var e       = editors.find(x => x.id === eid);
+  var hasProj = projects.filter(p => p.editorId === eid && p.status !== 'completed');
+  var warning = hasProj.length
+    ? '<div style="background:#fcebeb;border:1px solid #F09595;border-radius:8px;padding:10px 12px;margin-top:12px;font-size:13px;color:#A32D2D"><i class="ti ti-alert-triangle"></i> This editor has <strong>'+hasProj.length+' active project'+(hasProj.length>1?'s':'')+'</strong>. They will become unassigned.</div>'
+    : '';
+  var html =
+    '<div class="modal-header">'+
+      '<div class="modal-title">Remove editor</div>'+
+      '<button class="close-btn" onclick="closeModal()"><i class="ti ti-x"></i></button>'+
+    '</div>'+
+    '<div class="modal-body">'+
+      '<div style="font-size:14px;margin-bottom:8px">Are you sure you want to remove <strong>'+escHtml(e.name)+'</strong>?</div>'+
+      '<div style="font-size:13px;color:#888">This will delete their account and all their update history.</div>'+
+      warning+
+    '</div>'+
+    '<div class="modal-footer">'+
+      '<button class="btn btn-secondary" onclick="closeModal()">Cancel</button>'+
+      '<button class="btn btn-danger" onclick="deleteEditor('+eid+')"><i class="ti ti-trash"></i> Remove editor</button>'+
+    '</div>';
+  showModal(html);
+}
+
+function deleteEditor(eid){
+  editors = editors.filter(x => x.id !== eid);
+  closeModal();
+  renderAll();
+  showToast('Editor removed.');
 }
 
 /* ── EDITOR: MY PROJECTS ── */
@@ -665,9 +806,10 @@ function showPage(name, btn){
 
 function toggleRole(){
   if(role === 'admin'){
-    role = 'editor'; currentEditorId = 0;
+    if(!editors.length){ showToast('No editors added yet.'); return; }
+    role = 'editor'; currentEditorId = editors[0].id;
     document.getElementById('role-pill').className = 'role-pill editor';
-    document.getElementById('role-pill').textContent = 'Editor: Alex Chen';
+    document.getElementById('role-pill').textContent = 'Editor: '+editors[0].name;
     document.getElementById('switch-btn').textContent = 'Switch to Admin view';
     document.getElementById('nav-admin').style.display = 'none';
     document.getElementById('nav-editor').style.display = 'flex';
